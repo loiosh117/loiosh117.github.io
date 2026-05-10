@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Mother's Day, Tarryn</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #faf6f1;
+            color: #3d2b1f;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Subtle paper grain texture */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+            opacity: 0.03;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        #hearts-canvas {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .card {
+            position: relative;
+            z-index: 2;
+            max-width: 520px;
+            margin: 2rem;
+            padding: 3rem 2.5rem;
+            background: #fffefc;
+            border-radius: 2px 255px 3px 25px / 255px 5px 225px 5px;
+            box-shadow:
+                2px 3px 0 rgba(0,0,0,0.08),
+                8px 12px 30px rgba(0,0,0,0.06);
+            transform: rotate(-0.5deg);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: rotate(0deg) translateY(-2px);
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: -3px; left: -3px; right: -3px; bottom: -3px;
+            border-radius: 2px 255px 3px 25px / 255px 5px 225px 5px;
+            border: 2px solid #c9a87c;
+            opacity: 0.4;
+            pointer-events: none;
+        }
+
+        h1 {
+            font-family: 'Caveat', cursive;
+            font-size: 2.8rem;
+            font-weight: 700;
+            color: #8b5e3c;
+            margin-bottom: 0.3rem;
+            line-height: 1.1;
+        }
+
+        .subtitle {
+            font-family: 'Caveat', cursive;
+            font-size: 1.4rem;
+            color: #a08060;
+            margin-bottom: 2rem;
+        }
+
+        .message {
+            font-size: 1.05rem;
+            line-height: 1.75;
+            color: #4a3b2f;
+            margin-bottom: 1.5rem;
+        }
+
+        .message p {
+            margin-bottom: 1rem;
+        }
+
+        .signature {
+            font-family: 'Caveat', cursive;
+            font-size: 1.6rem;
+            color: #8b5e3c;
+            margin-top: 2rem;
+            text-align: right;
+        }
+
+        .heart-btn {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 3;
+            width: 56px;
+            height: 56px;
+            background: #c9a87c;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 15px rgba(201, 168, 124, 0.4);
+            transition: all 0.2s ease;
+        }
+
+        .heart-btn:hover {
+            transform: scale(1.1);
+            background: #b8976b;
+        }
+
+        .heart-btn:active {
+            transform: scale(0.95);
+        }
+
+        @media (max-width: 540px) {
+            .card {
+                padding: 2rem 1.5rem;
+                margin: 1rem;
+            }
+            h1 { font-size: 2.2rem; }
+            .message { font-size: 0.95rem; }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="hearts-canvas"></canvas>
+
+    <div class="card">
+        <h1>Happy Mother's Day, Tarryn</h1>
+        <div class="subtitle">May 11, 2026</div>
+        <div class="message">
+            <p>You keep this whole thing running. The kids, the house, us — you handle it without making a fuss, and you make it look easy. It's not. I see it.</p>
+            <p>Thank you for being the best mom to our kids and for taking care of all of us. We wouldn't be us without you.</p>
+        </div>
+        <div class="signature">Love, Daniel</div>
+    </div>
+
+    <button class="heart-btn" id="heartBtn" title="Send some love">&#10084;</button>
+
+    <script>
+        const canvas = document.getElementById('hearts-canvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let hearts = [];
+        let mouse = { x: -1000, y: -1000 };
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        class Heart {
+            constructor(x, y, size, speed, opacity, drift) {
+                this.x = x;
+                this.y = y;
+                this.size = size;
+                this.speed = speed;
+                this.opacity = opacity;
+                this.drift = drift;
+                this.wobble = Math.random() * Math.PI * 2;
+                this.wobbleSpeed = 0.02 + Math.random() * 0.03;
+                this.color = `hsla(${10 + Math.random() * 25}, ${60 + Math.random() * 20}%, ${55 + Math.random() * 15}%, ${opacity})`;
+            }
+
+            update() {
+                this.y -= this.speed;
+                this.x += Math.sin(this.wobble) * this.drift;
+                this.wobble += this.wobbleSpeed;
+                this.opacity -= 0.001;
+
+                // Mouse repulsion
+                const dx = this.x - mouse.x;
+                const dy = this.y - mouse.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < 120) {
+                    const force = (120 - dist) / 120;
+                    this.x += (dx / dist) * force * 3;
+                    this.y += (dy / dist) * force * 3;
+                }
+            }
+
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, this.opacity);
+                ctx.fillStyle = this.color;
+                ctx.translate(this.x, this.y);
+                ctx.scale(this.size / 20, this.size / 20);
+                ctx.beginPath();
+                ctx.moveTo(0, 3);
+                ctx.bezierCurveTo(0, 2.5, -5, 0, -5, -3);
+                ctx.bezierCurveTo(-5, -6, -2, -7, 0, -4.5);
+                ctx.bezierCurveTo(2, -7, 5, -6, 5, -3);
+                ctx.bezierCurveTo(5, 0, 0, 2.5, 0, 3);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        function spawnHeart(x, y, burst = false) {
+            const count = burst ? 8 + Math.floor(Math.random() * 8) : 1;
+            for (let i = 0; i < count; i++) {
+                hearts.push(new Heart(
+                    x + (Math.random() - 0.5) * (burst ? 60 : 0),
+                    y + (Math.random() - 0.5) * (burst ? 30 : 0),
+                    burst ? 8 + Math.random() * 16 : 6 + Math.random() * 10,
+                    burst ? 0.8 + Math.random() * 1.5 : 0.3 + Math.random() * 0.8,
+                    burst ? 0.7 + Math.random() * 0.3 : 0.2 + Math.random() * 0.4,
+                    burst ? 1.5 + Math.random() * 2 : 0.3 + Math.random() * 0.7
+                ));
+            }
+        }
+
+        // Ambient floating hearts
+        setInterval(() => {
+            if (Math.random() < 0.3) {
+                spawnHeart(Math.random() * width, height + 20);
+            }
+        }, 300);
+
+        // Click / tap anywhere for burst
+        document.addEventListener('click', (e) => {
+            if (e.target.id === 'heartBtn') {
+                spawnHeart(width / 2, height / 2, true);
+                spawnHeart(width / 2 + 50, height / 2 - 30, true);
+                spawnHeart(width / 2 - 50, height / 2 - 30, true);
+                return;
+            }
+            spawnHeart(e.clientX, e.clientY, true);
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+            if (Math.random() < 0.08) {
+                spawnHeart(e.clientX, e.clientY);
+            }
+        });
+
+        // Touch support
+        document.addEventListener('touchstart', (e) => {
+            const t = e.touches[0];
+            spawnHeart(t.clientX, t.clientY, true);
+        });
+
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+            hearts = hearts.filter(h => h.opacity > 0 && h.y > -50);
+            hearts.forEach(h => { h.update(); h.draw(); });
+            requestAnimationFrame(animate);
+        }
+        animate();
+    </script>
+</body>
+</html>
